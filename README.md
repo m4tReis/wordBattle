@@ -12,8 +12,9 @@ Bibliotecas e APIs Utilizadas:
 -> Web Audio API: Uma API nativa do JavaScript utilizada no script `sounds.js` para sintetizar todos os efeitos sonoros proceduralmente, manipulando osciladores (sine, sawtooth, square) e filtros para criar batidas de tambor e reações da plateia.
 -> {temporário!!!!!!!!!!}  API / IA (Mock): A lógica do "Juiz" que dita se a palavra do jogador vence ou perde a rodada, além de trazer ícones/emojis para representar as palavras digitadas no "rosto" em formato de bloco dos lutadores.
 
-Estrutura de Diretórios
-
+## 📁 Estrutura de Diretórios
+```text
+/
 ├── assets/                 # Imagens como background e ícones das palavras geradas
 ├── css/                    # Arquivos modulares de estilo
 │   ├── base.css            # Variáveis neon, resets e fontes
