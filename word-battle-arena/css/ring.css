@@ -1,0 +1,224 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   RING.CSS — Boxing ring environment: mat, ropes, posts, spotlights
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Screen Layout ──────────────────────────────────────────────────────────── */
+#screen-game {
+  background: var(--bg);
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+/* ─── Ring Container ────────────────────────────────────────────────────── */
+#ring {
+  position: fixed;
+  top: var(--hud-h);
+  bottom: calc(var(--input-h) + var(--history-h));
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  /* Use the boxing ring background image */
+  background-image: url('../assets/images/background.jpg');
+  background-size: cover;
+  background-position: center 30%;
+  background-repeat: no-repeat;
+}
+
+/* Dark overlay to keep fighters and text readable */
+#ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg,
+      rgba(4, 2, 14, 0.45) 0%,
+      rgba(4, 2, 14, 0.25) 50%,
+      rgba(4, 2, 14, 0.65) 100%
+    );
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ─── Spotlights ─────────────────────────────────────────────────────────────── */
+.spotlight {
+  position: absolute;
+  top: -80px;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+.spotlight-left {
+  left: -5%;
+  width: 50%;
+  height: 80%;
+  background: radial-gradient(
+    ellipse 60% 80% at 40% 0%,
+    rgba(255, 48, 96, 0.11) 0%,
+    rgba(255, 48, 96, 0.04) 40%,
+    transparent 75%
+  );
+  animation: spotlight-pulse-l 4s ease-in-out infinite;
+}
+
+.spotlight-right {
+  right: -5%;
+  width: 50%;
+  height: 80%;
+  background: radial-gradient(
+    ellipse 60% 80% at 60% 0%,
+    rgba(0, 212, 255, 0.11) 0%,
+    rgba(0, 212, 255, 0.04) 40%,
+    transparent 75%
+  );
+  animation: spotlight-pulse-r 4s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.spotlight-center {
+  left: 25%;
+  right: 25%;
+  height: 60%;
+  background: radial-gradient(
+    ellipse 100% 100% at 50% 0%,
+    rgba(255, 255, 220, 0.04) 0%,
+    transparent 70%
+  );
+}
+
+/* ─── CSS Ropes (hidden — ropes are now in the background image) ─── */
+#ropes {
+  display: none;
+}
+
+/* ─── Corner Posts (hidden — in background image) ─── */
+.post {
+  display: none;
+}
+
+/* ─── Ring Mat ──────────────────────────────────────────────────────────────── */
+#ring-mat {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 130px;
+  /* Transparent — the floor comes from the background image */
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(4, 2, 14, 0.5) 70%,
+    rgba(4, 2, 14, 0.85) 100%
+  );
+  border-top: none;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.mat-divider {
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 1px;
+  background: rgba(255,255,255,0.04);
+  transform: translateX(-50%);
+}
+
+.mat-center-circle {
+  position: absolute;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.05);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.mat-logo {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 8px;
+  color: rgba(255,255,255,0.05);
+  user-select: none;
+  z-index: 1;
+  margin-top: 40px;
+}
+
+/* ─── Fighter Containers ─────────────────────────────────────────────────────── */
+/* Both fighters share same absolute position; GSAP x-offset separates them */
+.fighter-container {
+  position: absolute;
+  bottom: 75px; /* sits on mat */
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+  /* GSAP sets xPercent: -50 and x: ±homeX */
+}
+
+/* ─── Ring Overlays ──────────────────────────────────────────────────────────── */
+.vs-text {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 72px;
+  letter-spacing: 10px;
+  color: white;
+  text-shadow:
+    0 0 20px rgba(255,255,255,0.5),
+    3px 3px 0 rgba(0,0,0,0.4);
+  z-index: 30;
+  pointer-events: none;
+}
+
+.ko-banner {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: clamp(72px, 12vw, 128px);
+  letter-spacing: 8px;
+  color: var(--neon-yellow);
+  text-shadow:
+    0 0 40px rgba(255, 212, 38, 0.9),
+    0 0 80px rgba(255, 212, 38, 0.5),
+    4px 4px 0 rgba(0,0,0,0.6);
+  z-index: 30;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.impact-word {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display);
+  font-size: 80px;
+  letter-spacing: 4px;
+  z-index: 35;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ─── Ring Animation Keyframes ───────────────────────────────────────────────── */
+@keyframes spotlight-pulse-l {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes spotlight-pulse-r {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes rope-flicker-r {
+  0%, 90%, 92%, 95%, 100% { opacity: 1; }
+  91% { opacity: 0.7; }
+  93% { opacity: 0.9; }
+  94% { opacity: 0.8; }
+}
