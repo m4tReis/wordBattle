@@ -148,7 +148,7 @@
 /* Both fighters share same absolute position; GSAP x-offset separates them */
 .fighter-container {
   position: absolute;
-  bottom: 75px; /* sits on mat */
+  bottom: 20px; /* Aligned with the visual floor of the background image */
   left: 50%;
   display: flex;
   flex-direction: column;
