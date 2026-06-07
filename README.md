@@ -8,7 +8,7 @@ Utilizados para o Front:
 ### Bibliotecas e APIs Utilizadas
 *   **[GSAP (GreenSock Animation Platform)](https://gsap.com/):** A principal engine do projeto para orquestrar as animações assíncronas do jogo. O GSAP controla a rotação de braços, movimento de impacto e timelines complexas.
 *   **Web Audio API:** Uma API nativa do JavaScript utilizada no script `sounds.js` para sintetizar todos os efeitos sonoros proceduralmente, manipulando osciladores (sine, sawtooth, square) e filtros para criar batidas de tambor e reações da plateia.
-*   **API / IA (Mock):** A lógica do "Juiz" que dita se a palavra do jogador vence ou perde a rodada, além de trazer ícones/emojis para representar as palavras digitadas no "rosto" em formato de bloco dos lutadores.
+*   **API / IA (Mock) [temporário!!!!!!!!]:** A lógica do "Juiz" que dita se a palavra do jogador vence ou perde a rodada, além de trazer ícones/emojis para representar as palavras digitadas no "rosto" em formato de bloco dos lutadores.
 
 ## 📁 Estrutura de Diretórios
 ```text
