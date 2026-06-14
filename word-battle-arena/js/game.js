@@ -51,6 +51,7 @@ const Game = (() => {
     input.addEventListener('keydown', e => { if (e.key === 'Enter') onSubmit(); });
     input.addEventListener('input',   () => {
       Sounds.type();
+      hideVerdict();   // clear any rule warning as the player retypes
       // Enable submit only when there's content
       document.getElementById('btn-submit').disabled = (input.value.trim().length < 2);
     });
@@ -92,6 +93,9 @@ const Game = (() => {
     leftFighter.setWordInstant(currentWord, media);
     rightFighter.showQuestion();
 
+    // Paint the AI backdrop for the reigning word (immune elements stay put)
+    await paintSceneFor(currentWord);
+
     // Fighters enter
     await Promise.all([
       leftFighter.enter(0),
@@ -115,7 +119,15 @@ const Game = (() => {
 
     const input      = document.getElementById('player-input');
     const playerWord = input.value.trim();
-    if (!playerWord || playerWord.length < 2) {
+
+    // ── Input rules: blocklist, no opponent match, no repeats ──────────────
+    // used = the opponent's word + every word already played this run
+    const verdict = WordRules.check(playerWord, {
+      current: currentWord,
+      used:    [...wordHistory, currentWord],
+    });
+    if (!verdict.ok) {
+      showVerdict(verdict.reason, 'warn');
       shakeInput();
       return;
     }
@@ -280,6 +292,9 @@ const Game = (() => {
     currentWord = playerWord;
     updateHUD();
 
+    // The winning word now reigns — let the AI repaint the backdrop for it
+    await paintSceneFor(playerWord);
+
     // Fade both back in
     await Promise.all([
       new Promise(r => gsap.to(leftFighter.root,  { opacity: 1, duration: 0.35, onComplete: r })),
@@ -397,7 +412,8 @@ const Game = (() => {
 
   function showVerdict(text, type) {
     const el = document.getElementById('judge-verdict');
-    el.textContent = `"${text}"`;
+    // Rule warnings show plain; judge verdicts are quoted like a commentator line
+    el.textContent = type === 'warn' ? text : `"${text}"`;
     el.className   = `judge-verdict v-${type}`;
     gsap.fromTo(el, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.3 });
   }
@@ -480,6 +496,27 @@ const Game = (() => {
       { scale: 0, opacity: 0 },
       { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(2)', delay: 0.5 }
     );
+  }
+
+  // ── Scene orchestration (cache-aside over the NoSQL store) ──────────────────
+  //
+  //   1. Read the latest stored scene for the word (SceneStore → IndexedDB).
+  //   2. Miss? Ask the "AI" (MockAPI.generateScene) and persist the result.
+  //   3. Render it (Stage). Persistence never blocks or breaks gameplay.
+  //
+  async function paintSceneFor(word) {
+    try {
+      let doc = await SceneStore.getLatest(word);
+      if (!doc) {
+        const scene = MockAPI.generateScene(word);   // ← swap for real AI later
+        doc = await SceneStore.put(word, scene, { source: 'demo' });
+      }
+      Stage.applyScene(doc.scene);
+    } catch (err) {
+      // Storage hiccup must never stop the match — render straight from the AI.
+      console.warn('[Game] scene store failed, rendering without persistence:', err);
+      Stage.applyScene(MockAPI.generateScene(word));
+    }
   }
 
   // ── Misc Helpers ───────────────────────────────────────────────────────────

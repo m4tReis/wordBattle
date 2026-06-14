@@ -31,9 +31,31 @@
   --radius-md:  10px;
   --radius-lg:  16px;
 
-  --hud-h:    68px;
+  --hud-h:    96px;
   --input-h:  120px;
   --history-h: 52px;
+
+  /* ─── Layering tokens (z-index contract) ─────────────────────────────────────
+     The whole "immune elements" guarantee lives here. The AI may ONLY write to
+     #ai-stage (--z-ai-stage), which is the DEEPEST layer inside the ring. Every
+     protected element (ring structure, fighters, HUD) sits on a HIGHER layer,
+     so AI background changes can never overlap or cover them.
+     Do NOT give any AI-controlled element a z-index >= --z-ring.            */
+  --z-ai-stage:    1;  /* AI-controlled backdrop — the only editable surface  */
+  --z-ambient:     2;  /* spotlights / atmosphere (decorative, not editable)  */
+  --z-ring:        5;  /* IMMUNE: mat, back & side ropes, back posts          */
+  --z-fighters:   10;  /* IMMUNE: the two fighters                            */
+  --z-ring-front: 12;  /* IMMUNE: front ropes & posts (frame in front)        */
+  --z-overlays:  30;   /* VS / KO / impact text                               */
+  --z-history:   50;   /* word sequence bar                                   */
+  --z-hud:      100;   /* IMMUNE: score / round / record + input area         */
+  --z-particles:150;   /* hit particles (top-most fx)                         */
+
+  /* AI palette token. The AI sets this (via Stage.setAccent); IMMUNE elements
+     OPT IN to read it for accent colour only (floor glow, centre spotlight).
+     This lets the AI's theme ripple safely through protected elements — it can
+     only influence a colour, never structure, visibility or layout.          */
+  --ai-accent: #00d4ff;
 }
 
 /* ─── Reset ─────────────────────────────────────────────────────────────────── */
@@ -218,26 +240,91 @@ html, body {
   font-size: 1.1em;
 }
 
-/* ─── HUD ────────────────────────────────────────────────────────────────────── */
+/* ─── HUD — Suspended Boxing Jumbotron ───────────────────────────────────────── */
 #hud {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: var(--hud-h);
+  display: flex;
+  justify-content: center;
+  z-index: var(--z-hud);
+  pointer-events: none;   /* the telão never intercepts clicks */
+}
+
+/* The whole rig hangs from the very top: truss → cables → screen */
+.jumbo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Mounting truss bar at the ceiling */
+.jumbo-truss {
+  width: 260px;
+  height: 7px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #3a3a48 0%, #15151f 100%);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+/* Two suspension cables */
+.jumbo-cables {
+  position: relative;
+  width: 100%;
+  height: 14px;
+}
+.jumbo-cables span {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.3), rgba(255,255,255,0.06));
+}
+.jumbo-cables span:first-child  { left: calc(50% - 96px); }
+.jumbo-cables span:last-child   { left: calc(50% + 94px); }
+
+/* The screen panel itself */
+.jumbo-screen {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 28px;
-  background: rgba(7, 7, 15, 0.85);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  z-index: 100;
+  gap: 22px;
+  padding: 12px 30px 14px;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(16,16,30,0.96) 0%, rgba(7,7,15,0.97) 100%);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  box-shadow:
+    0 14px 40px rgba(0,0,0,0.6),
+    0 0 0 4px rgba(0,0,0,0.4),
+    0 0 26px rgba(0, 212, 255, 0.10),
+    inset 0 0 24px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.10);
+}
+
+/* LED scanline texture over the screen */
+.jumbo-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: repeating-linear-gradient(
+    0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px);
+  pointer-events: none;
+}
+
+.hud-divider {
+  width: 1.5px;
+  align-self: stretch;
+  margin: 4px 0;
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.16), transparent);
 }
 
 .hud-block {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 80px;
+  min-width: 84px;
 }
 
 .hud-label {
@@ -283,7 +370,7 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  z-index: 50;
+  z-index: var(--z-history);
   padding: 0 20px;
   background: rgba(7, 7, 15, 0.5);
   border-top: 1px solid rgba(255,255,255,0.04);
@@ -345,7 +432,7 @@ html, body {
   background: rgba(7, 7, 15, 0.92);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255,255,255,0.06);
-  z-index: 100;
+  z-index: var(--z-hud);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -460,6 +547,13 @@ html, body {
   text-shadow: 0 0 8px rgba(255, 48, 96, 0.4);
 }
 
+.judge-verdict.v-warn {
+  color: var(--neon-yellow);
+  font-style: normal;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(255, 212, 38, 0.4);
+}
+
 /* ─── Game Over Screen ───────────────────────────────────────────────────────── */
 #screen-gameover {
   z-index: 20;
@@ -541,7 +635,7 @@ html, body {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 150;
+  z-index: var(--z-particles);
 }
 
 /* Keyframes used in main */

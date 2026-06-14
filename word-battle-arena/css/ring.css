@@ -17,14 +17,26 @@
   left: 0;
   right: 0;
   overflow: hidden;
-  /* Use the boxing ring background image */
-  background-image: url('../assets/images/background.jpg');
-  background-size: cover;
-  background-position: center 30%;
-  background-repeat: no-repeat;
+  /* Neutral base. The actual backdrop now lives in #ai-stage so the AI can
+     repaint it freely without touching this container. */
+  background: var(--bg);
+
+  /* ─── Ring perspective geometry (shared by mat, posts, ropes) ───────────────
+     All distances are % of the ring height (bottom-anchored) or width.
+     --floor    = where the fighters' feet rest (front edge of the canvas)
+     --depth    = how far the canvas recedes upward toward the back wall
+     --x-front  = horizontal inset of the FRONT (near) corners
+     --x-back   = horizontal inset of the BACK (far) corners (narrower = perspective) */
+  --floor:    20%;
+  --depth:    15%;
+  --x-front:   3%;
+  --x-back:   23%;
+  --rope-red-2: #e0203f;
 }
 
-/* Dark overlay to keep fighters and text readable */
+/* Readability vignette — IMMUNE. Sits ABOVE the AI backdrop but BELOW the ring
+   structure/fighters, so whatever the AI paints stays dim enough for the
+   fighters and text to read clearly. The AI cannot remove this. */
 #ring::before {
   content: '';
   position: absolute;
@@ -32,11 +44,76 @@
   background:
     linear-gradient(180deg,
       rgba(4, 2, 14, 0.45) 0%,
-      rgba(4, 2, 14, 0.25) 50%,
+      rgba(4, 2, 14, 0.20) 50%,
       rgba(4, 2, 14, 0.65) 100%
     );
-  z-index: 0;
+  z-index: 3;        /* between --z-ambient (2) and --z-ring (5) */
   pointer-events: none;
+}
+
+/* ─── AI STAGE (editable backdrop) ─────────────────────────────────────────
+   Deepest layer. Everything the AI generates lives inside here and only here.
+   Managed exclusively by the Stage module (js/stage.js). */
+#ai-stage {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-ai-stage);
+  overflow: hidden;
+  pointer-events: none;   /* never steals clicks from the game */
+}
+
+#ai-stage-bg,
+#ai-stage-fx {
+  position: absolute;
+  inset: 0;
+}
+
+/* Default backdrop = the original arena image. The AI can replace this via
+   Stage.setBackground(); Stage.reset() restores it. */
+#ai-stage-bg {
+  background-image: url('../assets/images/background.jpg');
+  background-size: cover;
+  background-position: center 30%;
+  background-repeat: no-repeat;
+  transition: opacity 0.6s ease, filter 0.6s ease;
+}
+
+/* Holds AI-spawned scene elements (floating embers, snow, neon shapes, etc.) */
+#ai-stage-fx > * {
+  position: absolute;
+}
+
+/* CSS scenery silhouettes (mountains, sun/moon, clouds…) drawn by Stage.setScenery() */
+#ai-stage-scenery > * {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Drifting fog / mist — colour & opacity set by Stage.setFog() (opacity via GSAP) */
+#ai-stage-fog {
+  opacity: 0;
+  background-repeat: no-repeat;
+  background-size: 65% 85%, 75% 70%, 55% 65%;
+}
+#ai-stage-fog.is-on { animation: fog-drift 30s linear infinite; }
+@keyframes fog-drift {
+  0%   { background-position: -15% 60%, 115% 40%, 45% 85%; }
+  100% { background-position: 115% 55%, -15% 45%, 60% 70%; }
+}
+
+/* Ambient colour wash — recolours the whole backdrop mood. Because #ai-stage is
+   its own stacking context, this blend stays contained to the AI layer and can
+   never tint the fighters/ring/HUD above it. */
+#ai-stage-tint {
+  opacity: 0;
+  mix-blend-mode: soft-light;
+}
+
+/* Lightning / flash pulses — Stage.setFlash() animates the opacity */
+#ai-stage-flash {
+  opacity: 0;
+  background: #ffffff;
+  mix-blend-mode: screen;
 }
 
 /* ─── Spotlights ─────────────────────────────────────────────────────────────── */
@@ -45,6 +122,7 @@
   top: -80px;
   pointer-events: none;
   border-radius: 50%;
+  z-index: var(--z-ambient);
 }
 
 .spotlight-left {
@@ -74,86 +152,230 @@
   animation-delay: -2s;
 }
 
+/* Centre spotlight — OPT-IN reader of the AI accent token. Falls back to a
+   warm white when the AI hasn't set a colour. */
 .spotlight-center {
   left: 25%;
   right: 25%;
   height: 60%;
   background: radial-gradient(
     ellipse 100% 100% at 50% 0%,
-    rgba(255, 255, 220, 0.04) 0%,
-    transparent 70%
+    color-mix(in srgb, var(--ai-accent, #fffadc) 30%, transparent) 0%,
+    transparent 72%
   );
+  transition: background 0.6s ease;
 }
 
-/* ─── CSS Ropes (hidden — ropes are now in the background image) ─── */
-#ropes {
-  display: none;
+/* ─── Ring Frame — ropes + posts (REACTIVATED, perspective) ─────────────────
+   Real DOM ring structure — IMMUNE. Split into two layers:
+     #ropes        → --z-ring (5)        behind the fighters: back ropes, side
+                                          rope planes, far posts.
+     #ropes-front  → --z-ring-front (12) in front of the fighters: front ropes
+                                          and the two near posts.
+   The fighters (z 10) therefore stand BETWEEN the back and front ropes — i.e.
+   genuinely inside the ring. */
+#ropes, #ropes-front {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+#ropes       { z-index: var(--z-ring); }
+#ropes-front { z-index: var(--z-ring-front); }
+
+/* ── Neon cable (shared by back & front ropes) ── */
+.rope {
+  position: absolute;
+  height: 6px;
+  border-radius: 4px;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    var(--rope-red-2) 45%,
+    #7a0f1f 100%);
+  box-shadow:
+    0 0 10px rgba(224, 32, 63, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+}
+/* turnbuckle wrap marks along each cable */
+.rope::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    90deg, transparent 0 40px, rgba(0, 0, 0, 0.22) 40px 44px);
 }
 
-/* ─── Corner Posts (hidden — in background image) ─── */
+/* Back ropes: strung between the far posts (narrower span = perspective).
+   Kept in the lower body / chest band so the fighters' heads rise ABOVE the
+   top rope, as in a real ring. */
+.rope-back  { left: var(--x-back); right: var(--x-back); height: 5px; }
+.rope-b1 { bottom: calc(var(--floor) + var(--depth) + 11%); }
+.rope-b2 { bottom: calc(var(--floor) + var(--depth) +  6%); }
+.rope-b3 { bottom: calc(var(--floor) + var(--depth) +  1%); }
+
+/* Front ropes: between the near posts — lower & wider (perspective), and
+   semi-transparent so the fighters stay readable behind them. */
+.rope-front { left: var(--x-front); right: var(--x-front); height: 6px; opacity: 0.8; }
+.rope-f1 { bottom: calc(var(--floor) + 16%); }
+.rope-f2 { bottom: calc(var(--floor) +  9%); }
+.rope-f3 { bottom: calc(var(--floor) +  2%); }
+
+/* ── Side rope planes: %-based clip-path quads that connect the near corner to
+      the far corner on each side. Pure %, so they track the posts at any size
+      and turn the "fence" into a real enclosed ring. ── */
+.rope-side {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      118deg,
+      rgba(224, 32, 63, 0.0)  0 16px,
+      rgba(224, 32, 63, 0.32) 16px 19px),
+    linear-gradient(180deg, rgba(224,32,63,0.06), rgba(122,15,31,0.02));
+}
+/* left plane: near band (x-front, front ropes) ↗ to far band (x-back, back ropes) */
+.rope-side-l {
+  clip-path: polygon(
+    var(--x-front) calc(100% - var(--floor) - 2%),
+    var(--x-front) calc(100% - var(--floor) - 16%),
+    var(--x-back)  calc(100% - var(--floor) - var(--depth) - 11%),
+    var(--x-back)  calc(100% - var(--floor) - var(--depth) - 1%));
+}
+.rope-side-r {
+  clip-path: polygon(
+    calc(100% - var(--x-front)) calc(100% - var(--floor) - 2%),
+    calc(100% - var(--x-front)) calc(100% - var(--floor) - 16%),
+    calc(100% - var(--x-back))  calc(100% - var(--floor) - var(--depth) - 11%),
+    calc(100% - var(--x-back))  calc(100% - var(--floor) - var(--depth) - 1%));
+}
+
+/* ── Corner posts: padded turnbuckle pillars ── */
 .post {
-  display: none;
+  position: absolute;
+  border-radius: 9px;
+  background: linear-gradient(180deg, var(--rope-gold) 0%, #6e5a08 100%);
+  box-shadow:
+    0 0 14px rgba(184, 150, 10, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.4);
+}
+.post::before {  /* padded cap */
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150%;
+  height: 16px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--rope-red-2) 0%, #7a0f1f 100%);
+  box-shadow: 0 0 10px rgba(224, 32, 63, 0.5);
 }
 
-/* ─── Ring Mat ──────────────────────────────────────────────────────────────── */
+/* Far posts (back): thinner & shorter — they read as distant */
+.post-bl, .post-br {
+  width: 14px;
+  height: 17%;
+  bottom: calc(var(--floor) + var(--depth) - 1%);
+}
+.post-bl { left:  calc(var(--x-back) - 0.6%); }
+.post-br { right: calc(var(--x-back) - 0.6%); }
+
+/* Near posts (front): thicker & taller — they read as close to the viewer */
+.post-fl, .post-fr {
+  width: 20px;
+  height: 24%;
+  bottom: calc(var(--floor) - 3%);
+}
+.post-fl { left:  var(--x-front); }
+.post-fr { right: var(--x-front); }
+
+/* ─── Ring Mat (perspective canvas + front apron) ───────────────────────────── */
 #ring-mat {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 130px;
-  /* Transparent — the floor comes from the background image */
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(4, 2, 14, 0.5) 70%,
-    rgba(4, 2, 14, 0.85) 100%
-  );
-  border-top: none;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  left: 0; right: 0; bottom: 0;
+  height: calc(var(--floor) + var(--depth) + 4%);
+  z-index: var(--z-ring);
+  pointer-events: none;
 }
 
+/* The canvas the fighters stand on — a trapezoid receding toward the back wall.
+   Narrower at the top (far) than the bottom (near) = perspective. */
+.mat-surface {
+  position: absolute;
+  left: 0; right: 0; bottom: var(--floor);
+  height: var(--depth);
+  /* the floor light pool reads the AI accent — a bold, visible theme ripple */
+  background:
+    radial-gradient(ellipse 70% 95% at 50% 100%,
+      color-mix(in srgb, var(--ai-accent, #00d4ff) 26%, transparent), transparent 72%),
+    linear-gradient(180deg, rgba(20,16,40,0.55) 0%, rgba(30,22,58,0.78) 100%);
+  transition: background 0.6s ease;
+  clip-path: polygon(
+    var(--x-back) 0, calc(100% - var(--x-back)) 0,
+    calc(100% - var(--x-front)) 100%, var(--x-front) 100%);
+  /* glowing front edge (where the fighters stand) — OPT-IN reader of AI accent */
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--ai-accent, #00d4ff) 40%, transparent);
+  transition: box-shadow 0.6s ease;
+}
+
+/* center circle + halfway divider, drawn on the canvas */
+.mat-center-circle {
+  position: absolute;
+  width: 30%; height: 38%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.07);
+  left: 50%; top: 46%;
+  transform: translate(-50%, -50%);
+}
 .mat-divider {
   position: absolute;
   top: 0; bottom: 0; left: 50%;
   width: 1px;
-  background: rgba(255,255,255,0.04);
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
   transform: translateX(-50%);
 }
-
-.mat-center-circle {
+.mat-logo {
   position: absolute;
-  width: 80px; height: 80px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,0.05);
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+  left: 50%; top: 26%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 8px;
+  color: rgba(255,255,255,0.07);
 }
 
-.mat-logo {
+/* The front apron — the vertical skirt below the canvas, facing the viewer. */
+.mat-apron {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: var(--floor);
+  background: linear-gradient(180deg, rgba(12,9,26,0.92) 0%, rgba(5,3,12,0.98) 100%);
+  border-top: 2px solid color-mix(in srgb, var(--ai-accent, #00d4ff) 30%, transparent);
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+  transition: border-color 0.6s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.apron-text {
   font-family: var(--font-display);
-  font-size: 22px;
-  letter-spacing: 8px;
-  color: rgba(255,255,255,0.05);
-  user-select: none;
-  z-index: 1;
-  margin-top: 40px;
+  font-size: clamp(14px, 1.6vw, 22px);
+  letter-spacing: 10px;
+  color: rgba(255,255,255,0.10);
+  text-shadow: 0 0 14px rgba(0, 212, 255, 0.12);
 }
 
 /* ─── Fighter Containers ─────────────────────────────────────────────────────── */
 /* Both fighters share same absolute position; GSAP x-offset separates them */
 .fighter-container {
   position: absolute;
-  bottom: 20px; /* Aligned with the visual floor of the background image */
+  bottom: calc(var(--floor) - 1%); /* feet rest on the canvas front edge */
   left: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 10;
+  z-index: var(--z-fighters);
   /* GSAP sets xPercent: -50 and x: ±homeX */
 }
 
@@ -170,7 +392,7 @@
   text-shadow:
     0 0 20px rgba(255,255,255,0.5),
     3px 3px 0 rgba(0,0,0,0.4);
-  z-index: 30;
+  z-index: var(--z-overlays);
   pointer-events: none;
 }
 
@@ -187,7 +409,7 @@
     0 0 40px rgba(255, 212, 38, 0.9),
     0 0 80px rgba(255, 212, 38, 0.5),
     4px 4px 0 rgba(0,0,0,0.6);
-  z-index: 30;
+  z-index: var(--z-overlays);
   pointer-events: none;
   white-space: nowrap;
 }
@@ -200,7 +422,7 @@
   font-family: var(--font-display);
   font-size: 80px;
   letter-spacing: 4px;
-  z-index: 35;
+  z-index: calc(var(--z-overlays) + 5);
   pointer-events: none;
   white-space: nowrap;
 }
