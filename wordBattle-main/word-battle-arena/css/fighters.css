@@ -1,0 +1,378 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   FIGHTERS.CSS — Block-head fighter visual design
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Label above fighter ────────────────────────────────────────────────────── */
+.fighter-label {
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 3px;
+  text-align: center;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  position: relative;
+  z-index: 2;
+}
+
+#fc-left .fighter-label {
+  color: var(--neon-red);
+  text-shadow: 0 0 12px rgba(255, 48, 96, 0.6);
+}
+
+#fc-right .fighter-label {
+  color: var(--neon-blue);
+  text-shadow: 0 0 12px rgba(0, 212, 255, 0.6);
+  /* No counter-flip needed: label is outside fighter-body, which GSAP flips */
+}
+
+/* ─── Body ───────────────────────────────────────────────────────────────────── */
+.fighter-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* ─────────────────────────────────────────── HEAD BLOCK ─ */
+.f-head {
+  width: 92px;
+  height: 92px;
+  border-radius: 10px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+#fc-left .f-head {
+  background: linear-gradient(145deg, #2a0a18 0%, #1a0610 100%);
+  border: 2.5px solid var(--neon-red);
+  box-shadow:
+    0 0 18px rgba(255, 48, 96, 0.45),
+    0 0 40px rgba(255, 48, 96, 0.15),
+    inset 0 0 20px rgba(255, 48, 96, 0.08);
+}
+
+#fc-right .f-head {
+  background: linear-gradient(145deg, #0a1a2e 0%, #061018 100%);
+  border: 2.5px solid var(--neon-blue);
+  box-shadow:
+    0 0 18px rgba(0, 212, 255, 0.45),
+    0 0 40px rgba(0, 212, 255, 0.15),
+    inset 0 0 20px rgba(0, 212, 255, 0.08);
+}
+
+/* Head inner — holds content */
+.head-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* Question mark */
+.f-question {
+  font-family: var(--font-display);
+  font-size: 54px;
+  line-height: 1;
+}
+
+#fc-left .f-question  { color: var(--neon-red);  }
+#fc-right .f-question { color: var(--neon-blue); }
+
+/* Media container */
+.f-media {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+.f-img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: none;
+}
+
+.f-emoji {
+  font-size: 46px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Right fighter emoji needs counter-flip */
+#fc-right .f-emoji {
+  transform: scaleX(-1);
+}
+
+.f-word-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-align: center;
+  color: rgba(255,255,255,0.55);
+  line-height: 1;
+  max-width: 88px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: none;
+}
+
+/* Right fighter word label counter-flip */
+#fc-right .f-word-label {
+  transform: scaleX(-1);
+}
+
+/* Gloss shine overlay */
+.head-gloss {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 42%;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.12) 0%,
+    rgba(255,255,255,0.04) 60%,
+    transparent 100%
+  );
+  border-radius: 8px 8px 0 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Decorative corner accents */
+.head-corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  z-index: 3;
+}
+
+.head-corner-tl {
+  top: 4px; left: 4px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+  border-radius: 2px 0 0 0;
+}
+.head-corner-tr {
+  top: 4px; right: 4px;
+  border-top: 2px solid;
+  border-right: 2px solid;
+  border-radius: 0 2px 0 0;
+}
+
+#fc-left  .head-corner { border-color: rgba(255, 48, 96, 0.5); }
+#fc-right .head-corner { border-color: rgba(0, 212, 255, 0.5); }
+
+/* ──────────────────────────────────────────────── NECK ─ */
+.f-neck {
+  width: 20px;
+  height: 10px;
+  margin-top: -2px;
+  border-radius: 0 0 4px 4px;
+}
+
+#fc-left  .f-neck { background: #220810; border: 1px solid rgba(255, 48, 96, 0.2); }
+#fc-right .f-neck { background: #081420; border: 1px solid rgba(0, 212, 255, 0.2); }
+
+/* ─────────────────────────────────────────── MID SECTION ─ */
+.f-mid {
+  display: flex;
+  align-items: stretch;
+  width: 148px;
+  height: 85px;
+  position: relative;
+  margin-top: -1px;
+}
+
+/* ─── Torso ─── */
+.f-torso {
+  flex: 1;
+  height: 85px;
+  border-radius: 6px 6px 4px 4px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#fc-left .f-torso {
+  background: linear-gradient(180deg, #2e0a16 0%, #1a0610 100%);
+  border: 1.5px solid rgba(255, 48, 96, 0.25);
+}
+
+#fc-right .f-torso {
+  background: linear-gradient(180deg, #0a1828 0%, #060e18 100%);
+  border: 1.5px solid rgba(0, 212, 255, 0.25);
+}
+
+/* Torso texture lines */
+.f-torso::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.04) 0%,
+    transparent 40%
+  );
+}
+
+.torso-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  position: relative;
+  z-index: 1;
+}
+
+#fc-left  .torso-badge { background: radial-gradient(circle, rgba(255,48,96,0.5) 0%, transparent 70%); }
+#fc-right .torso-badge { background: radial-gradient(circle, rgba(0,212,255,0.5) 0%, transparent 70%); }
+
+/* ─── Arms ─── */
+.f-arm {
+  width: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  z-index: 2; /* Ensures both arms render in front of torso */
+}
+
+.f-forearm {
+  width: 20px;
+  height: 48px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+#fc-left  .f-forearm { background: linear-gradient(180deg, #2a0810 0%, #1a0608 100%); border: 1.5px solid rgba(255, 48, 96, 0.2); }
+#fc-right .f-forearm { background: linear-gradient(180deg, #081420 0%, #060e18 100%); border: 1.5px solid rgba(0, 212, 255, 0.2); }
+
+/*
+  GSAP controls arm rotation via ARM_GUARD_LEAD/REAR constants (fighters.js).
+  Pivot is at the TOP (shoulder) so the arm swings around the shoulder.
+  The right fighter body is flipped via GSAP scaleX:-1, so the same
+  positive rotation values work for both fighters.
+*/
+.f-arm-lead {
+  transform-origin: top center;
+  margin-top: 4px;
+  margin-right: -6px;
+}
+
+.f-arm-rear {
+  transform-origin: top center;
+  margin-top: 4px;
+  margin-left: -6px;
+}
+
+/* ─── Gloves ─── */
+.f-glove {
+  width: 30px;
+  height: 24px;
+  border-radius: 12px 12px 6px 6px;
+  flex-shrink: 0;
+  position: relative;
+  margin-bottom: -2px;
+}
+
+.f-glove::before {
+  content: '';
+  position: absolute;
+  top: 2px; left: 3px; right: 3px;
+  height: 40%;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px 8px 0 0;
+}
+
+#fc-left .f-glove {
+  background: linear-gradient(145deg, #ff3060 0%, #aa1030 100%);
+  box-shadow: 0 0 10px rgba(255, 48, 96, 0.6), 0 2px 4px rgba(0,0,0,0.5);
+}
+
+#fc-right .f-glove {
+  background: linear-gradient(145deg, #00d4ff 0%, #0080aa 100%);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.6), 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* ──────────────────────────────────────────────── LEGS ─ */
+.f-legs {
+  display: flex;
+  gap: 10px;
+  margin-top: 3px;
+}
+
+.f-leg {
+  width: 30px;
+  height: 58px;
+  border-radius: 4px 4px 0 0;
+  transform-origin: top center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+#fc-left .f-leg {
+  background: linear-gradient(180deg, #200810 0%, #140508 100%);
+  border: 1.5px solid rgba(255, 48, 96, 0.15);
+  border-bottom: none;
+}
+
+#fc-right .f-leg {
+  background: linear-gradient(180deg, #081020 0%, #060a14 100%);
+  border: 1.5px solid rgba(0, 212, 255, 0.15);
+  border-bottom: none;
+}
+
+/* Boot */
+.f-boot {
+  width: calc(100% + 8px);
+  height: 14px;
+  border-radius: 3px 3px 4px 4px;
+  margin-left: -4px;
+  position: relative;
+}
+
+#fc-left .f-boot {
+  background: linear-gradient(135deg, #ff3060, #aa1030);
+  box-shadow: 0 2px 6px rgba(255, 48, 96, 0.4);
+}
+
+#fc-right .f-boot {
+  background: linear-gradient(135deg, #00d4ff, #0080aa);
+  box-shadow: 0 2px 6px rgba(0, 212, 255, 0.4);
+}
+
+/* ──────────────────────────────────────────────── SHADOW ─ */
+.fighter-shadow {
+  width: 90px;
+  height: 14px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, transparent 70%);
+  border-radius: 50%;
+  margin-top: 4px;
+  filter: blur(2px);
+}
+
+/*
+  The right fighter body flip is now managed entirely by GSAP (scaleX: -1).
+  This avoids GSAP overriding the CSS transform when animating body-right.
+  See _initPosition() and reset() in fighters.js.
+*/

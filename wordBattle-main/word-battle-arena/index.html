@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Quem Vence? Um jogo de relações em um banco não relacional.">
+  <title>Quem Vence? 🥊</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/ring.css">
+  <link rel="stylesheet" href="css/fighters.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════ INTRO -->
+  <div id="screen-intro" class="screen">
+    <div class="intro-bg"></div>
+    <div class="intro-content">
+      <div class="intro-logo">
+        <span class="logo-word logo-word-1">QUEM</span>
+        <div class="logo-gloves">🥊</div>
+        <span class="logo-word logo-word-2">VENCE?</span>
+      </div>
+      <p class="intro-desc">
+        Um jogo de relações em um banco não relacional
+      </p>
+      <div class="intro-rules">
+        <div class="rule-item"><span class="rule-icon">🎯</span> Cada vitória vale pontos</div>
+        <div class="rule-item"><span class="rule-icon">🧠</span> Seja criativo — a IA julga tudo</div>
+        <div class="rule-item"><span class="rule-icon">💀</span> Uma derrota e game over</div>
+      </div>
+      <button id="btn-start" class="btn-primary">
+        <span>ENTRAR NO RING</span>
+        <span class="btn-icon">🥊</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════ GAME -->
+  <div id="screen-game" class="screen">
+
+    <!-- HUD — suspended boxing jumbotron -->
+    <div id="hud">
+      <div class="jumbo">
+        <div class="jumbo-truss"></div>
+        <div class="jumbo-cables"><span></span><span></span></div>
+        <div class="jumbo-screen">
+          <div class="hud-block hud-score">
+            <div class="hud-label">PONTOS</div>
+            <div id="score-value" class="hud-number">0</div>
+          </div>
+          <div class="hud-divider"></div>
+          <div class="hud-block hud-center">
+            <div id="round-display" class="hud-round">ROUND 1</div>
+            <div id="streak-display" class="hud-streak"></div>
+          </div>
+          <div class="hud-divider"></div>
+          <div class="hud-block hud-best">
+            <div class="hud-label">RECORDE</div>
+            <div id="best-value" class="hud-number">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RING -->
+    <div id="ring">
+
+      <!-- ─── AI STAGE ───────────────────────────────────────────────────────
+           The ONLY layer the AI is allowed to modify. It sits at the bottom of
+           the z-index stack (var(--z-ai-stage)), behind every immune element
+           (ring structure, fighters, HUD). The future AI talks to it exclusively
+           through the Stage module (js/stage.js) — never the rest of the DOM. -->
+      <div id="ai-stage" aria-hidden="true">
+        <div id="ai-stage-bg"></div>       <!-- backdrop: sky / gradients          -->
+        <div id="ai-stage-scenery"></div>  <!-- CSS scenery shapes (mountains, sun) -->
+        <div id="ai-stage-fog"></div>      <!-- drifting fog / mist                -->
+        <div id="ai-stage-fx"></div>       <!-- spawned particles                  -->
+        <div id="ai-stage-tint"></div>     <!-- ambient colour wash (blend mode)   -->
+        <div id="ai-stage-flash"></div>    <!-- lightning / flash pulses           -->
+      </div>
+
+      <!-- Spotlights -->
+      <div class="spotlight spotlight-left"></div>
+      <div class="spotlight spotlight-right"></div>
+      <div class="spotlight spotlight-center"></div>
+
+      <!-- Ring Mat (perspective canvas + front apron) — BACK layer -->
+      <div id="ring-mat">
+        <div class="mat-surface">
+          <div class="mat-center-circle"></div>
+          <div class="mat-divider"></div>
+          <div class="mat-logo"></div>
+        </div>
+        <div class="mat-apron"><span class="apron-text">QUEM VENCE?</span></div>
+      </div>
+
+      <!-- Ring frame — BACK layer (behind fighters): back ropes, side planes, back posts -->
+      <div id="ropes">
+        <div class="rope-side rope-side-l"></div>
+        <div class="rope-side rope-side-r"></div>
+        <div class="rope rope-back rope-b1"></div>
+        <div class="rope rope-back rope-b2"></div>
+        <div class="rope rope-back rope-b3"></div>
+        <div class="post post-bl"></div>
+        <div class="post post-br"></div>
+      </div>
+
+      <!-- Ring frame — FRONT layer (in front of fighters): front ropes + front posts -->
+      <div id="ropes-front">
+        <div class="rope rope-front rope-f1"></div>
+        <div class="rope rope-front rope-f2"></div>
+        <div class="rope rope-front rope-f3"></div>
+        <div class="post post-fl"></div>
+        <div class="post post-fr"></div>
+      </div>
+
+      <!-- ─── LEFT FIGHTER (game / current word) ─── -->
+      <div class="fighter-container" id="fc-left">
+        <div class="fighter-label" id="label-left">?</div>
+        <div class="fighter-body" id="body-left">
+          <!-- Head Block -->
+          <div class="f-head" id="head-left">
+            <div class="head-inner" id="display-left">
+              <span class="f-question" id="q-left">?</span>
+              <div class="f-media hidden" id="media-left">
+                <img class="f-img" id="img-left" src="" alt="">
+                <span class="f-emoji" id="emoji-left"></span>
+                <span class="f-word-label" id="wlabel-left"></span>
+              </div>
+            </div>
+            <div class="head-gloss"></div>
+            <div class="head-corner head-corner-tl"></div>
+            <div class="head-corner head-corner-tr"></div>
+          </div>
+          <!-- Neck -->
+          <div class="f-neck" id="neck-left"></div>
+          <!-- Mid: Arms + Torso -->
+          <div class="f-mid" id="mid-left">
+            <div class="f-arm f-arm-rear" id="arm-rear-left">
+              <div class="f-forearm"></div>
+              <div class="f-glove"></div>
+            </div>
+            <div class="f-torso" id="torso-left">
+              <div class="torso-badge"></div>
+            </div>
+            <div class="f-arm f-arm-lead" id="arm-lead-left">
+              <div class="f-forearm"></div>
+              <div class="f-glove"></div>
+            </div>
+          </div>
+          <!-- Legs -->
+          <div class="f-legs" id="legs-left">
+            <div class="f-leg f-leg-a" id="leg-a-left">
+              <div class="f-boot"></div>
+            </div>
+            <div class="f-leg f-leg-b" id="leg-b-left">
+              <div class="f-boot"></div>
+            </div>
+          </div>
+        </div>
+        <div class="fighter-shadow"></div>
+      </div>
+
+      <!-- ─── RIGHT FIGHTER (player's word) ─── -->
+      <div class="fighter-container" id="fc-right">
+        <div class="fighter-label" id="label-right">?</div>
+        <div class="fighter-body" id="body-right">
+          <!-- Head Block -->
+          <div class="f-head" id="head-right">
+            <div class="head-inner" id="display-right">
+              <span class="f-question" id="q-right">?</span>
+              <div class="f-media hidden" id="media-right">
+                <img class="f-img" id="img-right" src="" alt="">
+                <span class="f-emoji" id="emoji-right"></span>
+                <span class="f-word-label" id="wlabel-right"></span>
+              </div>
+            </div>
+            <div class="head-gloss"></div>
+            <div class="head-corner head-corner-tl"></div>
+            <div class="head-corner head-corner-tr"></div>
+          </div>
+          <!-- Neck -->
+          <div class="f-neck" id="neck-right"></div>
+          <!-- Mid: Arms + Torso -->
+          <div class="f-mid" id="mid-right">
+            <div class="f-arm f-arm-rear" id="arm-rear-right">
+              <div class="f-forearm"></div>
+              <div class="f-glove"></div>
+            </div>
+            <div class="f-torso" id="torso-right">
+              <div class="torso-badge"></div>
+            </div>
+            <div class="f-arm f-arm-lead" id="arm-lead-right">
+              <div class="f-forearm"></div>
+              <div class="f-glove"></div>
+            </div>
+          </div>
+          <!-- Legs -->
+          <div class="f-legs" id="legs-right">
+            <div class="f-leg f-leg-a" id="leg-a-right">
+              <div class="f-boot"></div>
+            </div>
+            <div class="f-leg f-leg-b" id="leg-b-right">
+              <div class="f-boot"></div>
+            </div>
+          </div>
+        </div>
+        <div class="fighter-shadow"></div>
+      </div>
+
+      <!-- Overlays -->
+      <div id="vs-text" class="vs-text hidden">VS</div>
+      <div id="ko-banner" class="ko-banner hidden">K.O.!</div>
+      <div id="impact-word" class="impact-word hidden"></div>
+    </div><!-- /#ring -->
+
+    <!-- Word History -->
+    <div id="word-history">
+      <div class="history-label">SUAS RESPOSTAS</div>
+      <div id="history-chips" class="history-chips"></div>
+      <button id="btn-history" class="history-all-btn" title="Ver log de combate" aria-label="Ver log de combate">
+        <span class="history-all-icon">⚔️</span>
+        <span class="history-all-count" id="history-count">0</span>
+      </button>
+    </div>
+
+    <!-- Battle Log Drawer -->
+    <div id="history-overlay" class="history-overlay hidden" aria-hidden="true"></div>
+    <div id="history-drawer" class="history-drawer hidden" role="dialog" aria-modal="true" aria-label="Log de combate">
+      <div class="drawer-handle"></div>
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <span class="drawer-icon">⚔️</span>
+          Log de Combate
+        </div>
+        <div class="drawer-subtitle" id="drawer-subtitle">Nenhuma rodada ainda</div>
+        <button id="btn-close-drawer" class="drawer-close" aria-label="Fechar">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 2l14 14M16 2L2 16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div id="drawer-rounds" class="drawer-rounds"></div>
+      <div id="drawer-empty" class="drawer-empty hidden">
+        <span>🥊</span>
+        <p>Vença sua primeira batalha!</p>
+      </div>
+    </div>
+
+    <!-- Judge Verdict (flutuante, abaixo do HUD) -->
+    <div id="judge-verdict" class="judge-verdict hidden"></div>
+
+    <!-- Input Area -->
+    <div id="input-area">
+      <div class="battle-prompt">
+        O que vence <span id="prompt-word" class="prompt-highlight">?</span>?
+      </div>
+      <div class="input-row">
+        <input
+          type="text"
+          id="player-input"
+          class="word-input"
+          placeholder="Digite sua resposta..."
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="32"
+        >
+        <button id="btn-submit" class="btn-submit" disabled>
+          <span>LUTAR</span>
+          <span>🥊</span>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /#screen-game -->
+
+  <!-- ══════════════════════════════════════════════════════════ GAME OVER -->
+  <div id="screen-gameover" class="screen">
+    <div class="gameover-bg"></div>
+    <div class="gameover-content">
+      <div class="ko-big">K.O.!</div>
+      <div class="gameover-sub">Você foi nocauteado!</div>
+      <div class="score-reveal">
+        <div class="score-reveal-label">PONTUAÇÃO FINAL</div>
+        <div id="final-score" class="score-reveal-number">0</div>
+      </div>
+      <div id="gameover-info" class="gameover-info"></div>
+      <div class="gameover-actions">
+        <button id="btn-revenge" class="btn-primary">
+          <span>REVANCHE!</span>
+          <span class="btn-icon">🥊</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Particles Container -->
+  <div id="particles" aria-hidden="true"></div>
+
+  <!-- GSAP (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <!-- Game Scripts -->
+  <script src="js/sounds.js"></script>
+  <script src="js/mock-api.js"></script>
+  <script src="js/word-rules.js"></script>
+  <script src="js/stage.js"></script>
+  <script src="js/scene-store.js"></script>
+  <script src="js/fighters.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+</html>
