@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Word Battle Arena — O jogo de palavras no ringue! Digite palavras que vencem a anterior e lute até ser nocauteado.">
-  <title>Word Battle Arena 🥊</title>
+  <meta name="description" content="Quem Vence? Um jogo de relações em um banco não relacional.">
+  <title>Quem Vence? 🥊</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -20,14 +20,12 @@
     <div class="intro-bg"></div>
     <div class="intro-content">
       <div class="intro-logo">
-        <span class="logo-word logo-word-1">WORD</span>
+        <span class="logo-word logo-word-1">QUEM</span>
         <div class="logo-gloves">🥊</div>
-        <span class="logo-word logo-word-2">BATTLE</span>
+        <span class="logo-word logo-word-2">VENCE?</span>
       </div>
-      <div class="intro-arena">ARENA</div>
       <p class="intro-desc">
-        Digite palavras que vencem a anterior.<br>
-        A IA decide quem sai de pé!
+        Um jogo de relações em um banco não relacional
       </p>
       <div class="intro-rules">
         <div class="rule-item"><span class="rule-icon">🎯</span> Cada vitória vale pontos</div>
@@ -95,9 +93,9 @@
         <div class="mat-surface">
           <div class="mat-center-circle"></div>
           <div class="mat-divider"></div>
-          <div class="mat-logo">WBA</div>
+          <div class="mat-logo"></div>
         </div>
-        <div class="mat-apron"><span class="apron-text">WORD BATTLE ARENA</span></div>
+        <div class="mat-apron"><span class="apron-text">QUEM VENCE?</span></div>
       </div>
 
       <!-- Ring frame — BACK layer (behind fighters): back ropes, side planes, back posts -->
@@ -222,9 +220,39 @@
 
     <!-- Word History -->
     <div id="word-history">
-      <div class="history-label">SEQUÊNCIA</div>
+      <div class="history-label">SUAS RESPOSTAS</div>
       <div id="history-chips" class="history-chips"></div>
+      <button id="btn-history" class="history-all-btn" title="Ver log de combate" aria-label="Ver log de combate">
+        <span class="history-all-icon">⚔️</span>
+        <span class="history-all-count" id="history-count">0</span>
+      </button>
     </div>
+
+    <!-- Battle Log Drawer -->
+    <div id="history-overlay" class="history-overlay hidden" aria-hidden="true"></div>
+    <div id="history-drawer" class="history-drawer hidden" role="dialog" aria-modal="true" aria-label="Log de combate">
+      <div class="drawer-handle"></div>
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <span class="drawer-icon">⚔️</span>
+          Log de Combate
+        </div>
+        <div class="drawer-subtitle" id="drawer-subtitle">Nenhuma rodada ainda</div>
+        <button id="btn-close-drawer" class="drawer-close" aria-label="Fechar">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 2l14 14M16 2L2 16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div id="drawer-rounds" class="drawer-rounds"></div>
+      <div id="drawer-empty" class="drawer-empty hidden">
+        <span>🥊</span>
+        <p>Vença sua primeira batalha!</p>
+      </div>
+    </div>
+
+    <!-- Judge Verdict (flutuante, abaixo do HUD) -->
+    <div id="judge-verdict" class="judge-verdict hidden"></div>
 
     <!-- Input Area -->
     <div id="input-area">
@@ -246,7 +274,6 @@
           <span>🥊</span>
         </button>
       </div>
-      <div id="judge-verdict" class="judge-verdict hidden"></div>
     </div>
 
   </div><!-- /#screen-game -->

@@ -26,7 +26,8 @@ const Game = (() => {
   let bestScore   = 0;
   let round       = 1;
   let currentWord = '';
-  let wordHistory = [];
+  let wordHistory = [];  // palavras já usadas (para validação de repetição)
+  let roundLog    = [];  // [{ roundNum, opponent, player }] — log visual de combate
 
   /** @type {Fighter} */
   let leftFighter  = null;
@@ -45,6 +46,14 @@ const Game = (() => {
     document.getElementById('btn-start').addEventListener('click',   onStartClick);
     document.getElementById('btn-revenge').addEventListener('click', onStartClick);
     document.getElementById('btn-submit').addEventListener('click',  onSubmit);
+    document.getElementById('btn-history').addEventListener('click', openDrawer);
+    document.getElementById('btn-close-drawer').addEventListener('click', closeDrawer);
+    document.getElementById('history-overlay').addEventListener('click', closeDrawer);
+
+    // Keyboard: ESC closes drawer
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeDrawer();
+    });
 
     // Input listeners
     const input = document.getElementById('player-input');
@@ -75,9 +84,11 @@ const Game = (() => {
     currentWord = MockAPI.getStartWord();
 
     // Reset UI
+    roundLog = [];
     clearHistory();
     updateHUD();
     hideVerdict();
+    hideKO();
     document.getElementById('player-input').value = '';
     document.getElementById('btn-submit').disabled = true;
 
@@ -211,7 +222,7 @@ const Game = (() => {
     round++;
     Sounds.scoreUp();
     animateScorePop();
-    addToHistory(currentWord);
+    addToHistory(currentWord, playerWord, score);
 
     await sleep(400);
 
@@ -415,12 +426,11 @@ const Game = (() => {
     // Rule warnings show plain; judge verdicts are quoted like a commentator line
     el.textContent = type === 'warn' ? text : `"${text}"`;
     el.className   = `judge-verdict v-${type}`;
-    gsap.fromTo(el, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.3 });
+    gsap.fromTo(el, { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.35, ease: 'back.out(1.7)' });
   }
 
   function hideVerdict() {
     const el = document.getElementById('judge-verdict');
-    el.classList.add('hidden');
     el.className = 'judge-verdict hidden';
   }
 
@@ -435,11 +445,19 @@ const Game = (() => {
 
   // ── History ────────────────────────────────────────────────────────────────
 
-  function addToHistory(word) {
-    wordHistory.push(word);
+  // opponentWord = palavra que o jogador teve de vencer
+  // playerWord   = resposta digitada pelo jogador
+  // roundNum     = número da rodada concluída (score após o ponto)
+  function addToHistory(opponentWord, playerWord, roundNum) {
+    // 1. Guarda para validação de repetição (a palavra que o jogador usou)
+    wordHistory.push(playerWord);
+
+    // 2. Registra o round no log visual
+    roundLog.push({ roundNum, opponent: opponentWord, player: playerWord });
+
+    // 3. Atualiza a barra de sequência — mostra só a resposta do jogador
     const chips = document.getElementById('history-chips');
 
-    // Arrow separator
     if (wordHistory.length > 1) {
       const arrow = document.createElement('span');
       arrow.className = 'history-arrow';
@@ -447,34 +465,137 @@ const Game = (() => {
       chips.appendChild(arrow);
     }
 
-    // Remove 'current' class from previous chips
     chips.querySelectorAll('.chip-current').forEach(c => c.classList.remove('chip-current'));
 
     const chip = document.createElement('div');
     chip.className = 'history-chip chip-current';
-    chip.textContent = word;
+    chip.textContent = playerWord;
     chips.appendChild(chip);
 
-    // Entrance animation
     gsap.fromTo(chip,
       { opacity: 0, scale: 0.7, y: 5 },
       { opacity: 1, scale: 1,   y: 0, duration: 0.28, ease: 'back.out(2)' }
     );
 
-    // Auto-scroll right
     chips.scrollLeft = chips.scrollWidth;
 
-    // Trim to last 7 words
-    const allChips   = chips.querySelectorAll('.history-chip');
-    const allArrows  = chips.querySelectorAll('.history-arrow');
+    // Trim da barra visual a 7 itens
+    const allChips  = chips.querySelectorAll('.history-chip');
+    const allArrows = chips.querySelectorAll('.history-arrow');
     if (allChips.length > 7) {
       allChips[0].remove();
       if (allArrows[0]) allArrows[0].remove();
     }
+
+    // 4. Atualiza o contador do botão
+    updateHistoryCount();
   }
 
   function clearHistory() {
     document.getElementById('history-chips').innerHTML = '';
+    updateHistoryCount();
+    closeDrawer();
+  }
+
+  function updateHistoryCount() {
+    const total = roundLog.length;
+    document.getElementById('history-count').textContent = total;
+    const badge = document.getElementById('history-count');
+    gsap.fromTo(badge, { scale: 1.5 }, { scale: 1, duration: 0.3, ease: 'back.out(2)' });
+  }
+
+  // ── Battle Log Drawer ──────────────────────────────────────────────────────
+
+  function openDrawer() {
+    const overlay = document.getElementById('history-overlay');
+    const drawer  = document.getElementById('history-drawer');
+
+    renderRoundLog();
+
+    overlay.classList.remove('hidden');
+    drawer.classList.remove('hidden');
+
+    requestAnimationFrame(() => {
+      overlay.classList.add('visible');
+      drawer.classList.add('visible');
+    });
+  }
+
+  function closeDrawer() {
+    const overlay = document.getElementById('history-overlay');
+    const drawer  = document.getElementById('history-drawer');
+
+    overlay.classList.remove('visible');
+    drawer.classList.remove('visible');
+
+    setTimeout(() => {
+      overlay.classList.add('hidden');
+      drawer.classList.add('hidden');
+    }, 300);
+  }
+
+  function renderRoundLog() {
+    const container = document.getElementById('drawer-rounds');
+    const emptyEl   = document.getElementById('drawer-empty');
+    const subtitle  = document.getElementById('drawer-subtitle');
+
+    container.innerHTML = '';
+
+    const total = roundLog.length;
+
+    if (total === 0) {
+      subtitle.textContent = 'Nenhuma rodada ainda';
+      emptyEl.classList.remove('hidden');
+      container.classList.add('hidden');
+      return;
+    }
+
+    const rodadas = total === 1 ? '1 rodada' : `${total} rodadas`;
+    subtitle.textContent = `${rodadas} disputadas`;
+    emptyEl.classList.add('hidden');
+    container.classList.remove('hidden');
+
+    // Exibe do mais recente para o mais antigo
+    [...roundLog].reverse().forEach((entry, i) => {
+      const row = document.createElement('div');
+      row.className = 'round-entry';
+
+      // Número do round
+      const numEl = document.createElement('div');
+      numEl.className = 'round-entry-num';
+      numEl.innerHTML = `<strong>${entry.roundNum}</strong>RD`;
+
+      // Slot oponente
+      const oppSlot = document.createElement('div');
+      oppSlot.className = 'round-entry-slot slot-opponent';
+      oppSlot.innerHTML =
+        `<span class="round-entry-slot-label">Oponente</span>` +
+        `<span class="round-entry-slot-word">${entry.opponent}</span>`;
+
+      // VS
+      const vsEl = document.createElement('div');
+      vsEl.className = 'round-entry-vs';
+      vsEl.textContent = 'VS';
+
+      // Slot jogador
+      const plySlot = document.createElement('div');
+      plySlot.className = 'round-entry-slot slot-player';
+      plySlot.innerHTML =
+        `<span class="round-entry-slot-label">Sua resposta</span>` +
+        `<span class="round-entry-slot-word">${entry.player}</span>`;
+
+      row.appendChild(numEl);
+      row.appendChild(oppSlot);
+      row.appendChild(vsEl);
+      row.appendChild(plySlot);
+      container.appendChild(row);
+
+      // Animação escalonada
+      gsap.fromTo(row,
+        { opacity: 0, x: -16 },
+        { opacity: 1, x: 0, duration: 0.25, delay: i * 0.04, ease: 'power2.out' }
+      );
+    });
   }
 
   // ── Game Over ──────────────────────────────────────────────────────────────

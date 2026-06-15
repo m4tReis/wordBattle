@@ -162,3 +162,31 @@
   animation: rope-glow-pulse 4s ease-in-out infinite;
   animation-delay: -2s;
 }
+
+/* ─── Judge Verdict Pill Pulses ──────────────────────────────────────────────── */
+@keyframes verdict-pulse-green {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(31, 232, 116, 0.3), 0 6px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(31, 232, 116, 0.65), 0 6px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+}
+
+@keyframes verdict-pulse-red {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(255, 48, 96, 0.3), 0 6px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(255, 48, 96, 0.65), 0 6px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+}
+
+@keyframes verdict-pulse-yellow {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(255, 212, 38, 0.3), 0 6px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(255, 212, 38, 0.65), 0 6px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+}
