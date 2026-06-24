@@ -163,8 +163,12 @@ const Game = (() => {
     
     // Start the AI judging process CONCURRENTLY with the walk
     // This eliminates the 3-second delay after they meet!
-    const judgePromise = MockAPI.judgeWords(currentWord, playerWord, score);
-    
+    // (Single integration point — see js/ai-client.js + BACKEND.md)
+    const judgePromise = AIClient.judge({
+      currentWord, playerWord, round, score,
+      history: [...wordHistory],
+    });
+
     // Slow, tense walk to the center
     await Promise.all([
       leftFighter.walkToCenter(2.4),
@@ -173,6 +177,7 @@ const Game = (() => {
 
     // ── Phase 3: Judge ────────────────────────────────────────────────────
     // Wait for the AI result (it likely finished during the 2.4s walk)
+    // result = { winner: 'player' | 'opponent', reason, scene? }
     const result = await judgePromise;
 
     hideVS();
@@ -622,20 +627,21 @@ const Game = (() => {
   // ── Scene orchestration (cache-aside over the NoSQL store) ──────────────────
   //
   //   1. Read the latest stored scene for the word (SceneStore → IndexedDB).
-  //   2. Miss? Ask the "AI" (MockAPI.generateScene) and persist the result.
-  //   3. Render it (Stage). Persistence never blocks or breaks gameplay.
+  //   2. Miss? Ask the AI (AIClient.scene → backend, or mock) and persist it.
+  //   3. Render it (Stage). Persistence/backend never block or break gameplay.
   //
   async function paintSceneFor(word) {
     try {
       let doc = await SceneStore.getLatest(word);
       if (!doc) {
-        const scene = MockAPI.generateScene(word);   // ← swap for real AI later
-        doc = await SceneStore.put(word, scene, { source: 'demo' });
+        const scene = await AIClient.scene({ word, round, history: [...wordHistory] });
+        doc = await SceneStore.put(word, scene, { source: AIClient.config.useMock ? 'mock' : 'ai' });
       }
       Stage.applyScene(doc.scene);
     } catch (err) {
-      // Storage hiccup must never stop the match — render straight from the AI.
-      console.warn('[Game] scene store failed, rendering without persistence:', err);
+      // Backend/storage hiccup must never stop the match — fall back to the
+      // local mock scene (no network), which always resolves synchronously.
+      console.warn('[Game] scene fetch/store failed, using local fallback:', err);
       Stage.applyScene(MockAPI.generateScene(word));
     }
   }
