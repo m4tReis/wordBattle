@@ -11,29 +11,75 @@
      1. judge(matchup)  → who wins the round + a commentary line
      2. scene(word)     → the Scene object that repaints the arena backdrop
 
-   Switching mock ↔ real:
-     • Edit `config` below (useMock / baseUrl), OR
-     • At runtime, append to the URL (handy for the backend dev):
-         ?api=http://localhost:3000/api   → use the real backend at this URL
-         ?mock=1                          → force the mock back on
+   Configuração (resolvida em camadas — vence o primeiro encontrado):
+     1. Query string:  ?api=http://host/api  |  ?mock=1  |  ?mock=0
+     2. localStorage:  AIClient.setBackend('http://host/api') / setMock(true)
+     3. js/config.js:  window.WBA_CONFIG = { useMock, baseUrl }   ← por ambiente
+     4. DEFAULTS abaixo (fallback)
+   Detalhes completos em ../BACKEND.md (§1).
    ════════════════════════════════════════════════════════════════════════════ */
 
 const AIClient = (() => {
 
   // ─── Configuration ────────────────────────────────────────────────────────
-  const config = {
-    useMock:   true,    // ← flip to false (or pass ?api=…) to hit the real backend
-    baseUrl:   '',      // e.g. 'http://localhost:3000/api' (no trailing slash)
-    timeoutMs: 8000,    // request abort timeout
+  // Built-in fallback (último recurso, caso js/config.js não seja carregado).
+  // ► Para configurar por ambiente, edite js/config.js — NÃO precise mexer aqui.
+  const DEFAULTS = {
+    useMock:   false,
+    baseUrl:   'http://localhost:8081/api',
+    timeoutMs: 8000,
   };
+  const LS_API = 'wba_api', LS_MOCK = 'wba_mock';
 
-  // Optional runtime override via query string — lets the backend dev point the
-  // deployed front at their server without editing code.
-  try {
-    const qs = new URLSearchParams(location.search);
-    if (qs.get('api'))      { config.baseUrl = qs.get('api').replace(/\/+$/, ''); config.useMock = false; }
-    if (qs.get('mock') === '1') config.useMock = true;
-  } catch (_) { /* location may be unavailable in some contexts */ }
+  // Resolve a config em CAMADAS (vence o primeiro encontrado):
+  //   1. query string  (?api=… / ?mock=1|0)   — pontual, por aba
+  //   2. localStorage  (setBackend / setMock)  — persistente, por navegador
+  //   3. window.WBA_CONFIG (js/config.js)       — por ambiente
+  //   4. DEFAULTS                               — fallback embutido
+  function resolveConfig() {
+    const cfg = { ...DEFAULTS, ...(window.WBA_CONFIG || {}) };
+    try {
+      const a = localStorage.getItem(LS_API), m = localStorage.getItem(LS_MOCK);
+      if (a)        { cfg.baseUrl = a; cfg.useMock = false; }
+      if (m === '1') cfg.useMock = true;
+      if (m === '0') cfg.useMock = false;
+    } catch (_) { /* localStorage may be blocked */ }
+    try {
+      const qs = new URLSearchParams(location.search);
+      if (qs.get('api'))          { cfg.baseUrl = qs.get('api'); cfg.useMock = false; }
+      if (qs.get('mock') === '1')   cfg.useMock = true;
+      if (qs.get('mock') === '0')   cfg.useMock = false;
+    } catch (_) { /* location may be unavailable */ }
+
+    if (cfg.baseUrl) cfg.baseUrl = String(cfg.baseUrl).replace(/\/+$/, '');
+    if (!cfg.useMock && !cfg.baseUrl) {
+      console.warn('[AIClient] useMock=false sem baseUrl — voltando ao mock.');
+      cfg.useMock = true;
+    }
+    return cfg;
+  }
+
+  const config = resolveConfig();
+
+  // Helpers de conveniência (persistem no localStorage e valem na hora):
+  //   AIClient.setBackend('http://host/api')  → usa esse back, desliga o mock
+  //   AIClient.setMock(true|false)            → liga/desliga o mock
+  //   AIClient.clearConfig()                  → remove overrides salvos
+  function setBackend(url) {
+    try { localStorage.setItem(LS_API, url); localStorage.removeItem(LS_MOCK); } catch (_) {}
+    config.baseUrl = String(url).replace(/\/+$/, ''); config.useMock = false;
+    return config;
+  }
+  function setMock(on = true) {
+    try { localStorage.setItem(LS_MOCK, on ? '1' : '0'); } catch (_) {}
+    config.useMock = !!on;
+    return config;
+  }
+  function clearConfig() {
+    try { localStorage.removeItem(LS_API); localStorage.removeItem(LS_MOCK); } catch (_) {}
+    Object.assign(config, resolveConfig());
+    return config;
+  }
 
   // ─── HTTP helper (used only when useMock === false) ─────────────────────────
   async function postJSON(path, body) {
@@ -107,6 +153,6 @@ const AIClient = (() => {
     return postJSON('/scene', { word, round, history });
   }
 
-  return { config, judge, scene };
+  return { config, judge, scene, setBackend, setMock, clearConfig };
 
 })();

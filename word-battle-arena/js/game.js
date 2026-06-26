@@ -104,8 +104,10 @@ const Game = (() => {
     leftFighter.setWordInstant(currentWord, media);
     rightFighter.showQuestion();
 
-    // Paint the AI backdrop for the reigning word (immune elements stay put)
-    await paintSceneFor(currentWord);
+    // Paint the AI backdrop for the reigning word (immune elements stay put).
+    // Non-blocking on purpose: a slow/offline backend must NEVER delay the
+    // fighters' entrance — the scene pops in once it resolves.
+    paintSceneFor(currentWord);
 
     // Fighters enter
     await Promise.all([
@@ -164,9 +166,16 @@ const Game = (() => {
     // Start the AI judging process CONCURRENTLY with the walk
     // This eliminates the 3-second delay after they meet!
     // (Single integration point — see js/ai-client.js + BACKEND.md)
+    // If the backend call fails (down / CORS / endpoint missing), fall back to
+    // the local mock judge so the round still resolves. The error is logged so
+    // the back-end problem stays visible in the console.
     const judgePromise = AIClient.judge({
       currentWord, playerWord, round, score,
       history: [...wordHistory],
+    }).catch(async (err) => {
+      console.warn('[Game] AIClient.judge falhou — usando mock como fallback:', err);
+      const raw = await MockAPI.judgeWords(currentWord, playerWord, score);
+      return { winner: raw.winner === 'player' ? 'player' : 'opponent', reason: raw.reason, scene: null };
     });
 
     // Slow, tense walk to the center
@@ -308,8 +317,9 @@ const Game = (() => {
     currentWord = playerWord;
     updateHUD();
 
-    // The winning word now reigns — let the AI repaint the backdrop for it
-    await paintSceneFor(playerWord);
+    // The winning word now reigns — repaint the backdrop (non-blocking, same
+    // reason as in onStartClick: never block the round on backend latency).
+    paintSceneFor(playerWord);
 
     // Fade both back in
     await Promise.all([

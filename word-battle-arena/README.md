@@ -80,7 +80,7 @@ Todo contato do front com a IA do back está **centralizado** em um único arqui
 *   `AIClient.judge(...)` → `POST /judge` — decide quem vence a rodada (`{ winner, reason }`).
 *   `AIClient.scene(...)` → `POST /scene` — devolve o objeto `Scene` que pinta o fundo.
 
-Para usar o back real: em `ai-client.js`, `config.useMock = false` + `config.baseUrl`; ou abra o front com `?api=SUA_URL` (e `?mock=1` volta ao mock).
+Para apontar para o back, a config é resolvida em camadas (query string → `localStorage` → `js/config.js` → padrão). O jeito normal por ambiente é editar [`js/config.js`](js/config.js) (`window.WBA_CONFIG = { useMock, baseUrl }`); para um teste rápido, abra o front com `?api=SUA_URL` (e `?mock=1` volta ao mock).
 
 > 📄 **O contrato completo (request/response de cada endpoint + schema detalhado do `Scene` + stub de exemplo) está em [`BACKEND.md`](BACKEND.md)** — é o documento para o desenvolvedor do back.
 
@@ -132,7 +132,8 @@ word-battle-arena/
 ├── js/
 │   ├── sounds.js           # síntese de áudio (Web Audio API)
 │   ├── mock-api.js         # stand-in da IA: juiz, mídia das palavras e geração de cenas (SCENES)
-│   ├── ai-client.js        # ⟵ ÚNICA chamada à IA do back (AIClient.judge / .scene) — mockada
+│   ├── config.js           # ⟵ config por ambiente (window.WBA_CONFIG: useMock / baseUrl)
+│   ├── ai-client.js        # ⟵ ÚNICA chamada à IA do back (AIClient.judge / .scene)
 │   ├── word-rules.js       # validação de entrada + DISALLOWED_WORDS (lista de proibidas)
 │   ├── stage.js            # renderizador do fundo controlado pela IA (única camada editável)
 │   ├── scene-store.js      # persistência NoSQL (IndexedDB) das cenas

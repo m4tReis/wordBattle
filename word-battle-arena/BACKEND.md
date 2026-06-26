@@ -15,27 +15,44 @@ AIClient.judge({ currentWord, playerWord, round, score, history })  // quem venc
 AIClient.scene({ word, round, history })                            // cenário do fundo p/ a palavra
 ```
 
-Enquanto `config.useMock = true`, essas funções respondem localmente (via `MockAPI`). Quando o back estiver pronto, é só desligar o mock.
+Com `useMock = true`, essas funções respondem localmente (via `MockAPI`) e **não** fazem requisição de rede. Com `useMock = false`, elas chamam o back de verdade. O endereço do back é resolvido de forma **flexível**, em camadas — assim cada ambiente (dev / homolog / produção) é configurado sem mexer na lógica.
 
 ### Como apontar o front para o back
 
-Duas formas (sem precisar mexer no resto do código):
+A configuração é resolvida nesta ordem de prioridade (**vence o primeiro encontrado**):
 
-1. **No código** — em [`js/ai-client.js`](js/ai-client.js), `config`:
-   ```js
-   const config = {
-     useMock: false,                       // desliga o mock
-     baseUrl: 'http://localhost:3000/api', // sua URL base (sem barra no fim)
-     timeoutMs: 8000,
-   };
-   ```
-2. **Pela URL** (prático para testar sem editar código):
-   ```
-   http://localhost:8123/?api=http://localhost:3000/api   → usa o back nessa URL
-   http://localhost:8123/?mock=1                          → força o mock de volta
-   ```
+| # | Fonte | Como usar | Escopo |
+|---|-------|-----------|--------|
+| 1 | **Query string** | abrir o front com `?api=http://host/api` · `?mock=1` (liga mock) · `?mock=0` (desliga) | pontual, por aba — ótimo p/ um teste rápido |
+| 2 | **localStorage** | no console: `AIClient.setBackend('http://host/api')` · `AIClient.setMock(true)` · `AIClient.clearConfig()` | persistente, por navegador |
+| 3 | **`js/config.js`** | editar `window.WBA_CONFIG = { useMock, baseUrl }` | **por ambiente — é aqui que se configura normalmente** |
+| 4 | Padrão embutido | `DEFAULTS` em [`js/ai-client.js`](js/ai-client.js) | fallback se o `config.js` não carregar |
 
-> ⚠️ **CORS:** o back precisa liberar a origem do front (`Access-Control-Allow-Origin`) e o método `POST` com `Content-Type: application/json`.
+**Para configurar um ambiente, edite [`js/config.js`](js/config.js):**
+```js
+window.WBA_CONFIG = {
+  useMock: false,
+  baseUrl: 'http://localhost:8081/api',   // dev local (Spring)
+  // baseUrl: window.location.origin + '/api',   // mesmo host / proxy reverso
+  // baseUrl: 'https://api.seu-dominio.com',     // produção
+};
+```
+
+> Os endpoints finais são `baseUrl + '/judge'` e `baseUrl + '/scene'` (ex.: `http://localhost:8081/api/judge`). Não coloque barra no fim da `baseUrl`.
+
+> ⚠️ **CORS (atenção!):** como o front e o back ficam em origens diferentes (portas/hosts distintos), o navegador envia um **preflight `OPTIONS`** antes do `POST` (por causa do `Content-Type: application/json`). O back **precisa** responder o preflight e liberar CORS — senão o navegador bloqueia a chamada (um cliente REST tipo Insomnia/Postman **não** dispara esse preflight, por isso lá "funciona" mesmo sem CORS).
+>
+> Spring Boot — exemplo global:
+> ```java
+> @Configuration
+> public class CorsConfig implements WebMvcConfigurer {
+>   @Override public void addCorsMappings(CorsRegistry r) {
+>     r.addMapping("/api/**")
+>      .allowedOrigins("*")               // ou a origem exata do front
+>      .allowedMethods("GET","POST","OPTIONS");
+>   }
+> }
+> ```
 
 ---
 
