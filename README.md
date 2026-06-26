@@ -69,7 +69,20 @@ A IA nunca toca no DOM diretamente: ela fala apenas com o módulo **`Stage`** ([
 | `flash`      | relâmpagos/pulsos de luz                                          |
 | `accent`     | cor-tema lida **opcionalmente** por elementos imunes (brilho do chão, holofote) |
 
-O "cérebro" que decide a cena hoje é um **mock** em [`js/mock-api.js`](js/mock-api.js) (`MockAPI.generateScene`, objeto `SCENES`). Para plugar uma IA real, basta trocar essa função — o resto do pipeline não muda.
+O "cérebro" que decide a cena hoje é um **mock** em [`js/mock-api.js`](js/mock-api.js) (`MockAPI.generateScene`, objeto `SCENES`). Para plugar uma IA real, **não se mexe no pipeline** — só na camada de integração descrita abaixo.
+
+---
+
+## 🔌 Integração com o Back-end
+
+Todo contato do front com a IA do back está **centralizado** em um único arquivo: [`js/ai-client.js`](js/ai-client.js) (`AIClient`). Hoje ele responde mockado, mas já no formato final — basta apontar para o back e funciona. São **duas chamadas**:
+
+*   `AIClient.judge(...)` → `POST /judge` — decide quem vence a rodada (`{ winner, reason }`).
+*   `AIClient.scene(...)` → `POST /scene` — devolve o objeto `Scene` que pinta o fundo.
+
+Para apontar para o back, a config é resolvida em camadas (query string → `localStorage` → `js/config.js` → padrão). O jeito normal por ambiente é editar [`js/config.js`](js/config.js) (`window.WBA_CONFIG = { useMock, baseUrl }`); para um teste rápido, abra o front com `?api=SUA_URL` (e `?mock=1` volta ao mock).
+
+> 📄 **O contrato completo (request/response de cada endpoint + schema detalhado do `Scene` + stub de exemplo) está em [`BACKEND.md`](BACKEND.md)** — é o documento para o desenvolvedor do back.
 
 ---
 
@@ -119,11 +132,14 @@ word-battle-arena/
 ├── js/
 │   ├── sounds.js           # síntese de áudio (Web Audio API)
 │   ├── mock-api.js         # stand-in da IA: juiz, mídia das palavras e geração de cenas (SCENES)
-│   ├── word-rules.js       # validação de entrada + DISALLOWED_WORDS (lista de proibidas)  ⟵
+│   ├── config.js           # ⟵ config por ambiente (window.WBA_CONFIG: useMock / baseUrl)
+│   ├── ai-client.js        # ⟵ ÚNICA chamada à IA do back (AIClient.judge / .scene)
+│   ├── word-rules.js       # validação de entrada + DISALLOWED_WORDS (lista de proibidas)
 │   ├── stage.js            # renderizador do fundo controlado pela IA (única camada editável)
 │   ├── scene-store.js      # persistência NoSQL (IndexedDB) das cenas
 │   ├── fighters.js         # classe Fighter: animações GSAP e partículas
 │   ├── game.js             # máquina de estados / fluxo das rodadas / regras
 │   └── main.js             # boot e tela de introdução
-└── index.html              # ponto de entrada que renderiza o palco da luta
+├── index.html              # ponto de entrada que renderiza o palco da luta
+└── BACKEND.md              # 📄 contrato de integração para o back-end (endpoints + Scene)
 ```
