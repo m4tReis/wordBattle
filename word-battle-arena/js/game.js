@@ -175,7 +175,7 @@ const Game = (() => {
     }).catch(async (err) => {
       console.warn('[Game] AIClient.judge falhou — usando mock como fallback:', err);
       const raw = await MockAPI.judgeWords(currentWord, playerWord, score);
-      return { winner: raw.winner === 'player' ? 'player' : 'opponent', reason: raw.reason, scene: null };
+      return { winner: raw.winner === 'player' ? 'player' : 'opponent', reason: raw.reason, playerEmoji: raw.playerEmoji || null, scene: null };
     });
 
     // Slow, tense walk to the center
@@ -186,10 +186,19 @@ const Game = (() => {
 
     // ── Phase 3: Judge ────────────────────────────────────────────────────
     // Wait for the AI result (it likely finished during the 2.4s walk)
-    // result = { winner: 'player' | 'opponent', reason, scene? }
+    // result = { winner: 'player' | 'opponent', reason, playerEmoji?, scene? }
     const result = await judgePromise;
 
     hideVS();
+
+    // The AI owns BOTH fighters' faces: the reigning word's emoji arrives via
+    // the scene (left fighter, in paintSceneFor) and the player word's emoji via
+    // the judge response (right fighter). The local mock emoji shown at reveal is
+    // only a fallback. Image-backed words keep their static image (image > emoji).
+    if (result.playerEmoji && !media.imageUrl) {
+      media.emoji = result.playerEmoji;
+      rightFighter.setWordInstant(playerWord, media);
+    }
 
     // ── Phase 4: Outcome ──────────────────────────────────────────────────
     if (result.winner === 'player') {
@@ -641,18 +650,28 @@ const Game = (() => {
   //   3. Render it (Stage). Persistence/backend never block or break gameplay.
   //
   async function paintSceneFor(word) {
+    let scene;
     try {
       let doc = await SceneStore.getLatest(word);
       if (!doc) {
-        const scene = await AIClient.scene({ word, round, history: [...wordHistory] });
-        doc = await SceneStore.put(word, scene, { source: AIClient.config.useMock ? 'mock' : 'ai' });
+        const fetched = await AIClient.scene({ word, round, history: [...wordHistory] });
+        doc = await SceneStore.put(word, fetched, { source: AIClient.config.useMock ? 'mock' : 'ai' });
       }
-      Stage.applyScene(doc.scene);
+      scene = doc.scene;
     } catch (err) {
       // Backend/storage hiccup must never stop the match — fall back to the
       // local mock scene (no network), which always resolves synchronously.
       console.warn('[Game] scene fetch/store failed, using local fallback:', err);
-      Stage.applyScene(MockAPI.generateScene(word));
+      scene = MockAPI.generateScene(word);
+    }
+
+    Stage.applyScene(scene);
+
+    // The reigning word's face emoji rides along with its scene (left fighter),
+    // whether it came from the backend or the local fallback. Image-backed words
+    // keep their static image (image takes priority over emoji).
+    if (scene.emoji && !MockAPI.getWordMedia(word).imageUrl) {
+      leftFighter.setWordInstant(word, { imageUrl: null, emoji: scene.emoji });
     }
   }
 

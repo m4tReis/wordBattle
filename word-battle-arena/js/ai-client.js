@@ -8,8 +8,10 @@
    ▸ Full request/response contract for the backend: see ../BACKEND.md ◂
 
    Two operations the AI must provide:
-     1. judge(matchup)  → who wins the round + a commentary line
+     1. judge(matchup)  → who wins the round + a commentary line (+ the player
+                          word's face emoji)
      2. scene(word)     → the Scene object that repaints the arena backdrop
+                          (carries the reigning word's face emoji too)
 
    Configuração (resolvida em camadas — vence o primeiro encontrado):
      1. Query string:  ?api=http://host/api  |  ?mock=1  |  ?mock=0
@@ -107,7 +109,7 @@ const AIClient = (() => {
     const reason = (typeof raw.reason === 'string' && raw.reason.trim())
       ? raw.reason
       : (winner === 'player' ? 'Você venceu a rodada!' : 'Você foi derrotado!');
-    return { winner, reason, scene: raw.scene || null };
+    return { winner, reason, scene: raw.scene || null, playerEmoji: raw.playerEmoji || null };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -120,9 +122,9 @@ const AIClient = (() => {
    *  REQUEST  (POST {baseUrl}/judge)
    *    { currentWord, playerWord, round, score, history: string[] }
    *  RESPONSE
-   *    { winner: 'player' | 'opponent', reason: string, scene?: Scene }
+   *    { winner: 'player' | 'opponent', reason: string, playerEmoji?: string, scene?: Scene }
    *
-   * @returns {Promise<{winner:'player'|'opponent', reason:string, scene:?object}>}
+   * @returns {Promise<{winner:'player'|'opponent', reason:string, playerEmoji:?string, scene:?object}>}
    */
   async function judge({ currentWord, playerWord, round = 1, score = 0, history = [] }) {
     if (config.useMock) {

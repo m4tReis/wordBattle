@@ -113,6 +113,7 @@ const SCENES = {
 
   // ── FOGO — erupting volcano at night ──────────────────────────────────────
   fogo: {
+    emoji: '🔥',
     background: 'linear-gradient(180deg, #1c0600 0%, #320d02 45%, #4a1403 72%, #1a0700 100%)',
     accent: '#ff5a1e',
     scenery: [
@@ -129,6 +130,7 @@ const SCENES = {
 
   // ── ÁGUA — sunlit ocean floor ─────────────────────────────────────────────
   agua: {
+    emoji: '💧',
     background: 'linear-gradient(180deg, #073a5c 0%, #052b46 50%, #02141f 100%)',
     accent: '#23b6ff',
     scenery: [
@@ -144,6 +146,7 @@ const SCENES = {
 
   // ── GELO — frozen peaks under a full moon ─────────────────────────────────
   gelo: {
+    emoji: '🧊',
     background: 'linear-gradient(180deg, #05131f 0%, #0a2236 50%, #0d2a40 100%)',
     accent: '#8fe6ff',
     scenery: [
@@ -159,6 +162,7 @@ const SCENES = {
 
   // ── PEDRA — rocky cavern ──────────────────────────────────────────────────
   pedra: {
+    emoji: '🪨',
     background: 'linear-gradient(180deg, #1c1a18 0%, #2a2622 45%, #14110e 100%)',
     accent: '#c8a878',
     scenery: [
@@ -172,6 +176,7 @@ const SCENES = {
 
   // ── RAIO — thunderstorm over a skyline ────────────────────────────────────
   raio: {
+    emoji: '⚡',
     background: 'linear-gradient(180deg, #0a0a1c 0%, #161334 55%, #0a0818 100%)',
     accent: '#c9a8ff',
     scenery: [
@@ -185,6 +190,7 @@ const SCENES = {
 
   // ── TERRA — canyon mesas at dusk ──────────────────────────────────────────
   terra: {
+    emoji: '🌍',
     background: 'linear-gradient(180deg, #3a2a14 0%, #4a3417 38%, #2a1d0c 70%, #160f06 100%)',
     accent: '#d98a3c',
     scenery: [
@@ -198,6 +204,7 @@ const SCENES = {
 
   // ── AR — bright cloudy sky ────────────────────────────────────────────────
   ar: {
+    emoji: '💨',
     background: 'linear-gradient(180deg, #244a6a 0%, #356a90 45%, #5a90b0 100%)',
     accent: '#bfe6ff',
     scenery: [
@@ -262,6 +269,15 @@ function wordsMatch(a, b) {
   return normalize(a) === normalize(b);
 }
 
+// Resolve the emoji for a word: exact match in EMOJI_MAP, then a partial match.
+// Returns null when nothing matches (callers decide their own fallback).
+function findEmoji(word) {
+  const w = normalize(word);
+  if (EMOJI_MAP[w]) return EMOJI_MAP[w];
+  const key = Object.keys(EMOJI_MAP).find(k => w.includes(normalize(k)) || normalize(k).includes(w));
+  return key ? EMOJI_MAP[key] : null;
+}
+
 function beats(winner, loser) {
   const w = normalize(winner);
   const l = normalize(loser);
@@ -303,7 +319,9 @@ const MockAPI = {
     // Same shape as the curated scenes, so unknown words feel just as authored.
     const hue  = (key.length * 47 + key.charCodeAt(0) * 7) % 360;
     const hue2 = (hue + 40) % 360;
+    const emoji = findEmoji(key) || EMOJI_MAP.default;
     return {
+      emoji,
       background: `linear-gradient(180deg, hsl(${hue},45%,10%) 0%, hsl(${hue},50%,16%) 45%, hsl(${hue},45%,7%) 100%)`,
       accent: `hsl(${hue}, 90%, 62%)`,
       scenery: [
@@ -318,17 +336,10 @@ const MockAPI = {
 
   /** @returns {{ imageUrl: string|null, emoji: string|null }} */
   getWordMedia(word) {
-    const w = normalize(word);
-    const imageUrl = WORD_IMAGES[w] || null;
-
-    // Find emoji: exact match, then partial
-    let emoji = EMOJI_MAP[w] || null;
-    if (!emoji) {
-      const key = Object.keys(EMOJI_MAP).find(k => w.includes(normalize(k)) || normalize(k).includes(w));
-      emoji = key ? EMOJI_MAP[key] : null;
-    }
-
-    return { imageUrl, emoji };
+    return {
+      imageUrl: WORD_IMAGES[normalize(word)] || null,
+      emoji:    findEmoji(word),
+    };
   },
 
   /**
@@ -336,7 +347,7 @@ const MockAPI = {
    * @param {string} currentWord  - game's word (left fighter)
    * @param {string} playerWord   - player's input (right fighter)
    * @param {number} currentScore - current player score (affects difficulty)
-   * @returns {Promise<{winner: 'player'|'game', reason: string}>}
+   * @returns {Promise<{winner: 'player'|'game', reason: string, playerEmoji: ?string}>}
    */
   async judgeWords(currentWord, playerWord, currentScore = 0) {
     // Simulate AI "thinking" delay
@@ -345,32 +356,36 @@ const MockAPI = {
     const cw = currentWord;
     const pw = playerWord;
 
+    // The player word's face emoji travels with the verdict (the front shows it
+    // on the right fighter), mirroring how the scene carries the reigning word's.
+    const playerEmoji = findEmoji(pw);
+
     // Same word check
     if (wordsMatch(cw, pw)) {
-      return { winner: 'game', reason: SAME_WORD_MSG };
+      return { winner: 'game', reason: SAME_WORD_MSG, playerEmoji };
     }
 
     // Too short
     if (normalize(pw).length < 2) {
-      return { winner: 'game', reason: 'Resposta muito curta!' };
+      return { winner: 'game', reason: 'Resposta muito curta!', playerEmoji };
     }
 
     // Known win for player
     if (beats(pw, cw)) {
-      return { winner: 'player', reason: fmt(pickRandom(WIN_MSGS), pw, cw) };
+      return { winner: 'player', reason: fmt(pickRandom(WIN_MSGS), pw, cw), playerEmoji };
     }
 
     // Known win for game
     if (beats(cw, pw)) {
-      return { winner: 'game', reason: fmt(pickRandom(LOSE_MSGS), cw, pw) };
+      return { winner: 'game', reason: fmt(pickRandom(LOSE_MSGS), cw, pw), playerEmoji };
     }
 
     // Unknown pair — probability-based, gets harder as score rises
     const winChance = Math.max(0.30, 0.70 - currentScore * 0.012);
     if (Math.random() < winChance) {
-      return { winner: 'player', reason: fmt(pickRandom(CREATIVE_WIN_MSGS), pw, cw) };
+      return { winner: 'player', reason: fmt(pickRandom(CREATIVE_WIN_MSGS), pw, cw), playerEmoji };
     } else {
-      return { winner: 'game', reason: fmt(pickRandom(LOSE_MSGS), cw, pw) };
+      return { winner: 'game', reason: fmt(pickRandom(LOSE_MSGS), cw, pw), playerEmoji };
     }
   },
 };

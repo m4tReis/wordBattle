@@ -86,6 +86,7 @@ Chamado quando o jogador envia a resposta (enquanto os lutadores caminham ao cen
 {
   "winner": "player",
   "reason": "\"água\" apaga o \"fogo\" facilmente!",
+  "playerEmoji": "💧",
   "scene":  null
 }
 ```
@@ -94,6 +95,7 @@ Chamado quando o jogador envia a resposta (enquanto os lutadores caminham ao cen
 |----------|----------------------------|:-----------:|------------------------------------------------------------------------|
 | `winner` | `"player"` \| `"opponent"` |     sim     | `"player"` = jogador venceu (avança). Qualquer outro valor = derrota (game over). |
 | `reason` | `string`                   |     sim     | Frase de "narração" exibida na tela (ex.: por que venceu/perdeu).      |
+| `playerEmoji` | `string`              |    não      | **Opcional.** Emoji exibido no rosto do lutador do jogador (a palavra enviada). Ignorado se a palavra tiver imagem estática no front; se omitido, o front usa um emoji local de *fallback*. |
 | `scene`  | `Scene` \| `null`          |    não      | **Opcional.** Se vier, é o cenário da palavra vencedora — economiza um round-trip. Hoje o front **ignora** e busca o cenário pelo `/scene` (veja §4). |
 
 > O front só diferencia **`"player"` (vitória)** de **qualquer-outra-coisa (derrota)**. Mande `"opponent"` para derrota.
@@ -168,6 +170,7 @@ O `Scene` descreve **só o fundo** da arena. **Todos os campos são opcionais** 
 | `flash`      | `Flash`         | Relâmpagos/pulsos de luz                                            |
 | `accent`     | `string`        | Cor-tema (CSS color) lida por elementos do ringue (brilho do chão, holofote) |
 | `filter`     | `string`        | `filter` CSS aplicado ao fundo (`hue-rotate`, `blur`…)             |
+| `emoji`      | `string`        | Emoji exibido no rosto do lutador que representa a palavra (ex.: `"🔥"`). Ignorado se a palavra já tiver imagem estática definida no front. |
 
 ### Sub-tipos
 
@@ -243,7 +246,9 @@ O `Scene` descreve **só o fundo** da arena. **Todos os campos são opcionais** 
 
 O front garante, por arquitetura de camadas (`z-index`), que a IA **só** pinta o fundo (`#ai-stage`). Os elementos "imunes" — **ringue, lutadores e o telão/HUD** — ficam acima e **não** são controlados pelo back. Ou seja, o `Scene` descreve **apenas o cenário/fundo**; não há (nem deve haver) campos para mexer em lutadores, placar ou cordas. (Detalhes em [`README.md`](README.md) → "A camada da IA e os elementos imunes".)
 
-A única exceção é o `accent`: uma **cor** que alguns elementos do ringue leem por conta própria (brilho do chão, holofote central) — o back manda só a cor, nunca a estrutura.
+As únicas exceções são **conteúdos pontuais** que alguns elementos imunes leem por conta própria — nunca estrutura:
+- `accent` (no `Scene`): uma **cor** lida por elementos do ringue (brilho do chão, holofote central).
+- `emoji` (no `Scene`) e `playerEmoji` (no `/judge`): o **emoji** mostrado no rosto dos lutadores (palavra reinante e palavra do jogador, respectivamente). O back manda só o glifo do emoji — nunca a estrutura, a posição ou as animações do lutador.
 
 ---
 
@@ -267,7 +272,8 @@ app.post('/api/judge', (req, res) => {
   res.json({
     winner: 'player',                                  // ou 'opponent'
     reason: `"${playerWord}" vence "${currentWord}"!`,
-    // scene: { ... }   // opcional
+    // playerEmoji: '💧',   // opcional — emoji do rosto do lutador do jogador
+    // scene: { ... }       // opcional
   });
 });
 
@@ -288,4 +294,4 @@ app.post('/api/scene', (req, res) => {
 
 ### Resumo para colar no chat
 
-> A chamada do front pra IA está num único arquivo: **`js/ai-client.js`** (`AIClient.judge` e `AIClient.scene`), hoje mockada mas já no formato final. São **2 endpoints** — `POST /judge` (retorna `{ winner, reason }`) e `POST /scene` (retorna um objeto `Scene` que descreve o **fundo** em CSS). Pra integrar: setar `useMock:false` + `baseUrl` no `ai-client.js`, ou abrir o front com `?api=SUA_URL`. Contrato completo (request/response + schema do `Scene`) está no **`BACKEND.md`**.
+> A chamada do front pra IA está num único arquivo: **`js/ai-client.js`** (`AIClient.judge` e `AIClient.scene`), hoje mockada mas já no formato final. São **2 endpoints** — `POST /judge` (retorna `{ winner, reason, playerEmoji? }`) e `POST /scene` (retorna um objeto `Scene` que descreve o **fundo** em CSS, incluindo o `emoji` da palavra reinante). Pra integrar: setar `useMock:false` + `baseUrl` no `ai-client.js`, ou abrir o front com `?api=SUA_URL`. Contrato completo (request/response + schema do `Scene`) está no **`BACKEND.md`**.
